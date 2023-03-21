@@ -4,6 +4,7 @@ import os
 import time
 import random
 pygame.font.init()
+GEN = 0
 
 main_font = pygame.font.SysFont("comicsans", 50)
 lost_font = pygame.font.SysFont("comicsans", 60)
@@ -222,12 +223,14 @@ def collide(obj1, obj2):
     offset_y = obj2.y - obj1.y
     return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
 
-def redraw_window(players,enemies,level):
+def redraw_window(players,enemies,level,gen):
         WIN.blit(BG, (0, 0))
         # draw text
         level_label = main_font.render(f"Level: {level}", 1, (255,255,255))
-
         WIN.blit(level_label, (WIDTH - level_label.get_width() - 10, 10))
+
+        gen_label = main_font.render(f"Gen: {gen}", 1, (255,255,255))
+        WIN.blit(gen_label, (10, 10))
 
         for enemy in enemies:
             enemy.draw(WIN)
@@ -245,6 +248,7 @@ def redraw_window(players,enemies,level):
         pygame.display.update()
 
 def main(genomes, config):
+    global GEN
     nets = []
     ge = []
     players = []
@@ -276,11 +280,11 @@ def main(genomes, config):
     lost = False
     lost_count = 0
 
-    redraw_window(players,enemies,level)
+    redraw_window(players,enemies,level,GEN)
 
     while run:
         clock.tick(FPS)
-        redraw_window(players,enemies,level)
+        redraw_window(players,enemies,level,GEN)
         for x,player in enumerate(players):
             if player.health <= 0:
                 ge[x].fitness -= 1
@@ -309,14 +313,15 @@ def main(genomes, config):
             temp.append(enemy.y)
             enemies_y.append(temp)
         max_y_enemy = max(enemies_y, key=lambda x: x[1])[0]
-                   #movement
+        
+        #movement it will be fixed
         for player in players:
             if player.x < enemies[max_y_enemy].x + 10 and player.x > enemies[max_y_enemy].x - 10:
                 player.shoot(laser_count)
             elif player.x > enemies[max_y_enemy].x - 10:
                 player.x -= player_vel
             elif player.x < enemies[max_y_enemy].x + 10:
-                player.x += player_vel  
+                player.x += player_vel
             
 
         for explosion in player.explosions[:]:
@@ -384,7 +389,7 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(main,1)
+    winner = p.run(main,50)
     # show final stats
     print('\nBest genome:\n{!s}'.format(winner))
     
