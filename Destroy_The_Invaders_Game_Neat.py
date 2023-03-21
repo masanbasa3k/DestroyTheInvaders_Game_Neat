@@ -12,7 +12,7 @@ lost_font = pygame.font.SysFont("comicsans", 60)
 WIDTH, HEIGHT = 750, 850
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Light in the Space")
-file_dir = '/Users/beyazituysal/Documents/PythonProjects/PygameGames/TestAiGame/imgs/invader_img'
+file_dir = 'Your local images file'
 
 def loadImage(spr):
     return pygame.image.load(os.path.join(f"{file_dir}/{spr}"))
@@ -26,11 +26,6 @@ Enemy_Ship3 = loadImage("spr_enemyShip3.png")
 
 #Laser
 redLaser = loadImage("spr_lazer.png")
-
-#med
-med = loadImage("spr_med.png")
-ammo = loadImage("spr_ammo.png")
-speed = loadImage("spr_speed.png")
 
 #Background
 BG = pygame.transform.scale((loadImage("spr_background.png")), (WIDTH, HEIGHT))#scale the bg
@@ -69,25 +64,6 @@ class Laser:
         self.img = img
         self.mask = pygame.mask.from_surface(self.img)
     
-    def draw(self, window):
-        window.blit(self.img, (self.x, self.y))
-
-    def move(self, vel):
-        self.y += vel
-    
-    def off_screen(self, height):
-        return not(self.y <= height and self.y >= 0)
-
-    def collision(self, obj):
-        return collide(self, obj)
-
-class Upgrade:
-    def __init__(self, x, y, img):
-        self.x = x
-        self.y = y
-        self.img = img
-        self.mask = pygame.mask.from_surface(self.img)
-
     def draw(self, window):
         window.blit(self.img, (self.x, self.y))
 
@@ -161,8 +137,8 @@ class Player(Ship):
         self.laser_img = redLaser
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_healt = health
-        self.upgrades = []
         self.explosions = []
+        self.f = 0 # for understand the killing the enemy
 
     def move_laser(self, vel, objs):
         self.cooldown()
@@ -174,18 +150,9 @@ class Player(Ship):
                 for obj in objs:
                     if laser.collision(obj):
                         objs.remove(obj)
-                        # add exp
+                        self.f = 1
                         exp = Explosion(obj.x-100, obj.y-150)
                         self.explosions.append(exp)
-                        if random.randrange(0,100) <= 30:
-                            r = random.randrange(0,3)
-                            if r == 1:
-                                upg = Upgrade(obj.x, obj.y, med)
-                            elif r == 2:
-                                upg = Upgrade(obj.x, obj.y, speed)
-                            else:
-                                upg = Upgrade(obj.x, obj.y, ammo)
-                            self.upgrades.append(upg)
                         if laser in self.lasers:
                             self.lasers.remove(laser)
     
@@ -236,8 +203,6 @@ def redraw_window(players,enemies,level,gen):
             enemy.draw(WIN)
 
         for player in players:
-            for upgrade in player.upgrades:
-                upgrade.draw(WIN)
 
             for explosion in player.explosions:
                 explosion.draw(WIN)
@@ -249,6 +214,7 @@ def redraw_window(players,enemies,level,gen):
 
 def main(genomes, config):
     global GEN
+    GEN += 1
     nets = []
     ge = []
     players = []
@@ -256,7 +222,7 @@ def main(genomes, config):
     for _, g in genomes:
         net = neat.nn.FeedForwardNetwork.create(g, config)
         nets.append(net)
-        players.append(Player(230,700))
+        players.append(Player(230,600))
         g.fitness = 0
         ge.append(g)
 
@@ -267,13 +233,11 @@ def main(genomes, config):
 
     enemies = []
     wave_length = 5
-    enemy_vel = 1
+    enemy_vel = 5
 
     player_vel = 5
     laser_vel = 10
     laser_count = 1
-    upgradeLaserTime = 0
-    upgradeSpeedTime = 0
 
     clock = pygame.time.Clock()
 
@@ -295,10 +259,10 @@ def main(genomes, config):
         if len(enemies) == 0:
             level += 1
             for g in ge:
-                g.fitness += 5
+                g.fitness += 1
             wave_length += 5
             for i in range(wave_length):
-                enemy = Enemy(random.randrange(50, WIDTH-50), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
+                enemy = Enemy(random.randrange(0, WIDTH-64), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
                 enemies.append(enemy)
 
         for event in pygame.event.get():
@@ -313,16 +277,26 @@ def main(genomes, config):
             temp.append(enemy.y)
             enemies_y.append(temp)
         max_y_enemy = max(enemies_y, key=lambda x: x[1])[0]
-        
-        #movement it will be fixed
-        for player in players:
-            if player.x < enemies[max_y_enemy].x + 10 and player.x > enemies[max_y_enemy].x - 10:
-                player.shoot(laser_count)
-            elif player.x > enemies[max_y_enemy].x - 10:
-                player.x -= player_vel
-            elif player.x < enemies[max_y_enemy].x + 10:
-                player.x += player_vel
+
+        for x, player in enumerate(players):
+
+            #output for moving
+            output1 = nets[x].activate((player.x, abs(player.x - enemies[max_y_enemy].x-48), abs(player.x - enemies[max_y_enemy].x + 108)))
             
+            #output for firing
+            output2 = nets[x].activate((player.x, abs(player.x - enemies[max_y_enemy].x), abs(player.x - enemies[max_y_enemy].x + 64)))
+
+            if output1[0] > 0.5:
+                player.x -= player_vel
+            elif output1[0] < 0.5:
+                player.x += player_vel
+
+            if output2[0] > 0.5:
+                player.shoot(1)
+
+            if player.f == 1:
+                ge[x].fitness += 0.5
+                player.f = 0
 
         for explosion in player.explosions[:]:
             if explosion.current_spr >= 7:
@@ -331,33 +305,17 @@ def main(genomes, config):
                 explosion.update()
 
         for x, player in enumerate(players):
+            if player.x < 0:
+                ge[x].fitness -= 1
+                players.pop(x)
+                nets.pop(x)
+                ge.pop(x)
+            elif player.x > 700:
+                ge[x].fitness -= 1
+                players.pop(x)
+                nets.pop(x)
+                ge.pop(x)
 
-            for upgrade in player.upgrades[:]:
-                upgrade.move(4)
-
-                if collide(upgrade, player):
-                    if upgrade.img == med:
-                        player.health += 10
-                        if player.health > player.max_healt:
-                            player.health = player.max_healt
-                    elif upgrade.img == ammo:
-                        upgradeLaserTime = time.time()
-                        if random.randint(0, 2) == 1:
-                            laser_count = 2
-                        else:
-                            laser_count = 3 
-                    elif upgrade.img == speed:
-                        upgradeSpeedTime = time.time()
-                        player_vel = 8
-
-                    player.upgrades.remove(upgrade)
-
-        removeLaserUpg = time.time()
-        removeSpeedUpg = time.time()
-        if removeLaserUpg - upgradeLaserTime >= 3:
-            laser_count = 1  
-        if removeSpeedUpg - upgradeSpeedTime >= 5:
-            player_vel = 5
 
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
@@ -367,15 +325,16 @@ def main(genomes, config):
                 enemy.shoot()
             for x, player in enumerate(players):
                 if collide(enemy, player):
-                    # enemies.remove(enemy)
-                    ge[x].fitness -= 1
-                    players.pop(x)
-                    nets.pop(x)
-                    ge.pop(x)   
+                    if enemy in enemies:
+                        enemies.remove(enemy) 
+                    player.health -= 1000
                 elif enemy.y + enemy.get_height() > HEIGHT:
-                    enemies.remove(enemy)
+                    if enemy in enemies:
+                        enemies.remove(enemy)
 
         player.move_laser(-laser_vel, enemies)
+        if len(players) <= 0:
+            run = False
 
 def run(config_path):
     config = neat.config.Config(neat.DefaultGenome,
