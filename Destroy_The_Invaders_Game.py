@@ -7,7 +7,7 @@ pygame.font.init()
 WIDTH, HEIGHT = 750, 850
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Light in the Space")
-file_dir = '/Users/beyazituysal/Documents/PythonProjects/PygameGames/TestAiGame/imgs/invader_img'
+file_dir = 'Your local images file'
 
 def loadImage(spr):
     return pygame.image.load(os.path.join(f"{file_dir}/{spr}"))
