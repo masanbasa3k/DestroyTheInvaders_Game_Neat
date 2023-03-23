@@ -12,7 +12,7 @@ lost_font = pygame.font.SysFont("comicsans", 60)
 WIDTH, HEIGHT = 750, 850
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Light in the Space")
-file_dir = 'Your local images file'
+file_dir = '/Users/beyazituysal/Documents/PythonProjects/PygameGames/TestAiGame/imgs/invader_img'
 
 def loadImage(spr):
     return pygame.image.load(os.path.join(f"{file_dir}/{spr}"))
@@ -99,7 +99,7 @@ class Ship:
             if laser.off_screen(HEIGHT):
                 self.lasers.remove(laser)
             elif laser.collision(obj):
-                obj.health -= 100
+                obj.health -= 1000
                 self.lasers.remove(laser)
 
     def cooldown(self):
@@ -160,9 +160,15 @@ class Player(Ship):
         super().draw(window)
         self.healthbar(window)
 
+    def chase(self, enemies):
+        pos = pygame.math.Vector2(self.x, self.y)
+        enemy = min([e for e in enemies], key=lambda e: pos.distance_to(pygame.math.Vector2(e.x, e.y)))
+        return enemy
+
     def healthbar(self, window):
-        pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width(), 10))
-        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width() * (self.health/self.max_healt), 10))
+        pass
+        # pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width(), 10))
+        # pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width() * (self.health/self.max_healt), 10))
 
 class Enemy(Ship):
     COLOR_MAP = {
@@ -212,6 +218,8 @@ def redraw_window(players,enemies,level,gen):
 
         pygame.display.update()
 
+
+
 def main(genomes, config):
     global GEN
     GEN += 1
@@ -232,7 +240,7 @@ def main(genomes, config):
 
 
     enemies = []
-    wave_length = 5
+    wave_length = 7
     enemy_vel = 5
 
     player_vel = 5
@@ -249,6 +257,7 @@ def main(genomes, config):
     while run:
         clock.tick(FPS)
         redraw_window(players,enemies,level,GEN)
+
         for x,player in enumerate(players):
             if player.health <= 0:
                 ge[x].fitness -= 1
@@ -259,8 +268,8 @@ def main(genomes, config):
         if len(enemies) == 0:
             level += 1
             for g in ge:
-                g.fitness += 1
-            wave_length += 5
+                g.fitness += 0.1
+            # wave_length += 5
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(0, WIDTH-64), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
                 enemies.append(enemy)
@@ -280,11 +289,12 @@ def main(genomes, config):
 
         for x, player in enumerate(players):
 
+            near_enemy = player.chase(enemies)
             #output for moving
-            output1 = nets[x].activate((player.x, abs(player.x - enemies[max_y_enemy].x-48), abs(player.x - enemies[max_y_enemy].x + 108)))
+            output1 = nets[x].activate((player.x, abs(player.x - near_enemy.x), abs(player.x - near_enemy.x+64)))
             
             #output for firing
-            output2 = nets[x].activate((player.x, abs(player.x - enemies[max_y_enemy].x), abs(player.x - enemies[max_y_enemy].x + 64)))
+            output2 = nets[x].activate((player.x, abs(player.x - near_enemy.x), abs(player.x - near_enemy.x+64)))
 
             if output1[0] > 0.5:
                 player.x -= player_vel
@@ -295,7 +305,7 @@ def main(genomes, config):
                 player.shoot(1)
 
             if player.f == 1:
-                ge[x].fitness += 0.5
+                ge[x].fitness += 1
                 player.f = 0
 
         for explosion in player.explosions[:]:
