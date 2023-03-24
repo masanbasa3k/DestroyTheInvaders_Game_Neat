@@ -191,6 +191,11 @@ class Enemy(Ship):
             self.lasers.append(laser)
             self.cool_down_counter = 1
 
+    def chase(self, enemies):
+        pos = pygame.math.Vector2(self.x, self.y)
+        enemy = min([e for e in enemies], key=lambda e: pos.distance_to(pygame.math.Vector2(e.x, e.y)))
+        return enemy
+
 def collide(obj1, obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y
@@ -268,8 +273,8 @@ def main(genomes, config):
         if len(enemies) == 0:
             level += 1
             for g in ge:
-                g.fitness += 0.1
-            # wave_length += 5
+                g.fitness += 0.5
+            wave_length += 1
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(0, WIDTH-64), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
                 enemies.append(enemy)
@@ -278,27 +283,28 @@ def main(genomes, config):
             if event.type == pygame.QUIT:
                 quit()
         
-        #find the nearest enemy
-        enemies_y = []
-        for x,enemy in enumerate(enemies):
-            temp = []
-            temp.append(x)
-            temp.append(enemy.y)
-            enemies_y.append(temp)
-        max_y_enemy = max(enemies_y, key=lambda x: x[1])[0]
+        # #find the nearest enemy
+        # enemies_y = []
+        # for x,enemy in enumerate(enemies):
+        #     temp = []
+        #     temp.append(x)
+        #     temp.append(enemy.y)
+        #     enemies_y.append(temp)
+        # max_y_enemy = max(enemies_y, key=lambda x: x[1])[0]
 
         for x, player in enumerate(players):
 
             near_enemy = player.chase(enemies)
+            near_enemy2 = near_enemy.chase(enemies)
             #output for moving
-            output1 = nets[x].activate((player.x, abs(player.x - near_enemy.x), abs(player.x - near_enemy.x+64)))
+            output1 = nets[x].activate((player.x, abs(player.x - near_enemy.x), abs(player.x - near_enemy2.x+48)))
             
             #output for firing
-            output2 = nets[x].activate((player.x, abs(player.x - near_enemy.x), abs(player.x - near_enemy.x+64)))
+            output2 = nets[x].activate((player.x+32, near_enemy.x, near_enemy.x+64))
 
-            if output1[0] > 0.5:
+            if output1[0] < 0.5:
                 player.x -= player_vel
-            elif output1[0] < 0.5:
+            elif output1[0] > 0.5:
                 player.x += player_vel
 
             if output2[0] > 0.5:
