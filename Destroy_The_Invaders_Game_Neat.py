@@ -1,7 +1,6 @@
 import pygame
 import neat
 import os
-import time
 import random
 pygame.font.init()
 GEN = 0
@@ -29,31 +28,6 @@ redLaser = loadImage("spr_lazer.png")
 
 #Background
 BG = pygame.transform.scale((loadImage("spr_background.png")), (WIDTH, HEIGHT))#scale the bg
-
-explosionGif = [loadImage("spr_explosion1.png"),
-loadImage("spr_explosion2.png"),
-loadImage("spr_explosion3.png"),
-loadImage("spr_explosion4.png"),
-loadImage("spr_explosion5.png"),
-loadImage("spr_explosion6.png"),
-loadImage("spr_explosion7.png"),
-loadImage("spr_explosion8.png")]
-
-class Explosion:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.sprites = explosionGif
-        self.current_spr = 0
-        self.img = self.sprites[self.current_spr]
-        self.mask = pygame.mask.from_surface(self.img)
-
-    def draw(self, window):
-        window.blit(self.img, (self.x, self.y))
-
-    def update(self):
-        self.current_spr += 1
-        self.img = self.sprites[self.current_spr]
 
 
 
@@ -137,7 +111,6 @@ class Player(Ship):
         self.laser_img = redLaser
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_healt = health
-        self.explosions = []
         self.f = 0 # for understand the killing the enemy
 
     def move_laser(self, vel, objs):
@@ -151,24 +124,16 @@ class Player(Ship):
                     if laser.collision(obj):
                         objs.remove(obj)
                         self.f = 1
-                        exp = Explosion(obj.x-100, obj.y-150)
-                        self.explosions.append(exp)
                         if laser in self.lasers:
                             self.lasers.remove(laser)
     
     def draw(self, window):
         super().draw(window)
-        self.healthbar(window)
 
     def chase(self, enemies):
         pos = pygame.math.Vector2(self.x, self.y)
         enemy = min([e for e in enemies], key=lambda e: pos.distance_to(pygame.math.Vector2(e.x, e.y)))
         return enemy
-
-    def healthbar(self, window):
-        pass
-        # pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width(), 10))
-        # pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width() * (self.health/self.max_healt), 10))
 
 class Enemy(Ship):
     COLOR_MAP = {
@@ -191,11 +156,6 @@ class Enemy(Ship):
             self.lasers.append(laser)
             self.cool_down_counter = 1
 
-    def chase(self, enemies):
-        pos = pygame.math.Vector2(self.x, self.y)
-        enemy = min([e for e in enemies], key=lambda e: pos.distance_to(pygame.math.Vector2(e.x, e.y)))
-        return enemy
-
 def collide(obj1, obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y
@@ -215,9 +175,6 @@ def redraw_window(players,enemies,level,gen):
 
         for player in players:
 
-            for explosion in player.explosions:
-                explosion.draw(WIN)
-
             for player in players:
                 player.draw(WIN)
 
@@ -235,7 +192,7 @@ def main(genomes, config):
     for _, g in genomes:
         net = neat.nn.FeedForwardNetwork.create(g, config)
         nets.append(net)
-        players.append(Player(230,600))
+        players.append(Player((WIDTH/2)-(Player_Ship.get_width()/2), (HEIGHT/2)-(Player_Ship.get_height()/2)))
         g.fitness = 0
         ge.append(g)
 
@@ -250,12 +207,8 @@ def main(genomes, config):
 
     player_vel = 5
     laser_vel = 10
-    laser_count = 1
 
     clock = pygame.time.Clock()
-
-    lost = False
-    lost_count = 0
 
     redraw_window(players,enemies,level,GEN)
 
@@ -273,7 +226,7 @@ def main(genomes, config):
         if len(enemies) == 0:
             level += 1
             for g in ge:
-                g.fitness += 0.5
+                g.fitness += 1
             wave_length += 1
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(0, WIDTH-64), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
@@ -283,55 +236,38 @@ def main(genomes, config):
             if event.type == pygame.QUIT:
                 quit()
         
-        # #find the nearest enemy
-        # enemies_y = []
-        # for x,enemy in enumerate(enemies):
-        #     temp = []
-        #     temp.append(x)
-        #     temp.append(enemy.y)
-        #     enemies_y.append(temp)
-        # max_y_enemy = max(enemies_y, key=lambda x: x[1])[0]
-
         for x, player in enumerate(players):
 
             near_enemy = player.chase(enemies)
-            near_enemy2 = near_enemy.chase(enemies)
             #output for moving
-            output1 = nets[x].activate((player.x, abs(player.x - near_enemy.x), abs(player.x - near_enemy2.x+48)))
-            
-            #output for firing
-            output2 = nets[x].activate((player.x+32, near_enemy.x, near_enemy.x+64))
 
-            if output1[0] < 0.5:
+            # output1 = nets[x].activate((player.x, player.y, abs(player.x - near_enemy.x), abs(player.y - near_enemy.y)))
+            output1 = nets[x].activate((player.x, player.y, near_enemy.x, near_enemy.y))
+            decision1 = output1.index(max(output1))
+
+            if decision1 == 0:
+                pass
+            elif decision1 == 1:
                 player.x -= player_vel
-            elif output1[0] > 0.5:
+            elif decision1 == 2:
                 player.x += player_vel
-
-            if output2[0] > 0.5:
+            elif decision1 == 3:
+                player.y -= player_vel
+            elif decision1 == 4:
+                player.y += player_vel
+            elif decision1 == 5:
                 player.shoot(1)
 
             if player.f == 1:
                 ge[x].fitness += 1
                 player.f = 0
 
-        for explosion in player.explosions[:]:
-            if explosion.current_spr >= 7:
-                player.explosions.remove(explosion)
-            else:
-                explosion.update()
-
-        for x, player in enumerate(players):
-            if player.x < 0:
-                ge[x].fitness -= 1
+            # dont move out the screen
+            if player.x < 0 or player.x > WIDTH-player.get_width() or player.y < 0 or player.y > HEIGHT-player.get_height() :
+                ge[x].fitness -= 5
                 players.pop(x)
                 nets.pop(x)
                 ge.pop(x)
-            elif player.x > 700:
-                ge[x].fitness -= 1
-                players.pop(x)
-                nets.pop(x)
-                ge.pop(x)
-
 
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
