@@ -2,6 +2,7 @@ import pygame
 import neat
 import os
 import random
+import pickle
 pygame.font.init()
 GEN = 0
 
@@ -18,7 +19,8 @@ def loadImage(spr):
 
 ##IMAGES
 #Ships
-Player_Ship = loadImage("spr_playerShip.png")   
+Player_Ship = loadImage("spr_playerShip.png")
+Player_Ship = pygame.transform.scale(Player_Ship, (64,64)) 
 Enemy_Ship1 = loadImage("spr_enemyShip1.png")
 Enemy_Ship2 = loadImage("spr_enemyShip2.png")
 Enemy_Ship3 = loadImage("spr_enemyShip3.png")
@@ -122,7 +124,7 @@ class Player(Ship):
             else:
                 for obj in objs:
                     if laser.collision(obj):
-                        objs.remove(obj)
+                        # objs.remove(obj)
                         self.f = 1
                         if laser in self.lasers:
                             self.lasers.remove(laser)
@@ -226,7 +228,7 @@ def main(genomes, config):
         if len(enemies) == 0:
             level += 1
             for g in ge:
-                g.fitness += 1
+                g.fitness += 5
             wave_length += 1
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(0, WIDTH-64), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
@@ -242,11 +244,11 @@ def main(genomes, config):
             #output for moving
 
             # output1 = nets[x].activate((player.x, player.y, abs(player.x - near_enemy.x), abs(player.y - near_enemy.y)))
-            output1 = nets[x].activate((player.x, player.y, near_enemy.x, near_enemy.y))
+            output1 = nets[x].activate((player.x+32, player.y+32, near_enemy.x+32, near_enemy.y+32))
             decision1 = output1.index(max(output1))
 
             if decision1 == 0:
-                pass
+                player.shoot(1)
             elif decision1 == 1:
                 player.x -= player_vel
             elif decision1 == 2:
@@ -255,12 +257,10 @@ def main(genomes, config):
                 player.y -= player_vel
             elif decision1 == 4:
                 player.y += player_vel
-            elif decision1 == 5:
-                player.shoot(1)
 
-            if player.f == 1:
-                ge[x].fitness += 1
-                player.f = 0
+            # if player.f == 1:
+            #     ge[x].fitness += 5
+            #     player.f = 0
 
             # dont move out the screen
             if player.x < 0 or player.x > WIDTH-player.get_width() or player.y < 0 or player.y > HEIGHT-player.get_height() :
@@ -271,40 +271,48 @@ def main(genomes, config):
 
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
-            enemy.move_laser(laser_vel, player)
+            # enemy.move_laser(laser_vel, player)
 
-            if random.randrange(0, 2*60) == 1:
-                enemy.shoot()
+            # if random.randrange(0, 2*60) == 1:
+            #     enemy.shoot()
             for x, player in enumerate(players):
                 if collide(enemy, player):
-                    if enemy in enemies:
-                        enemies.remove(enemy) 
                     player.health -= 1000
-                elif enemy.y + enemy.get_height() > HEIGHT:
-                    if enemy in enemies:
-                        enemies.remove(enemy)
+
+                    # if enemy in enemies:
+                    #     enemies.remove(enemy) 
+            if enemy.y + enemy.get_height() > HEIGHT:
+                if enemy in enemies:
+                    enemies.remove(enemy)
 
         player.move_laser(-laser_vel, enemies)
         if len(players) <= 0:
             run = False
 
-def run(config_path):
-    config = neat.config.Config(neat.DefaultGenome,
-                                neat.DefaultReproduction,
-                                neat.DefaultSpeciesSet,
-                                neat.DefaultStagnation,
-                                config_path)
+def run(config):
+    #p = neat.Checkpointer.restore_checkpoint("neat-checkpoint-{number}")
     p = neat.Population(config)
     
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
+    p.add_reporter(neat.Checkpointer(50))#save the chekpoint
 
     winner = p.run(main,50)
+
+    #save the best winner
+    with open("best.pickle","wb") as file:
+        pickle.dump(winner, file)
+
     # show final stats
     print('\nBest genome:\n{!s}'.format(winner))
-    
+
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "config-feedforward.txt")
-    run(config_path)
+    config = neat.config.Config(neat.DefaultGenome,
+                                neat.DefaultReproduction,
+                                neat.DefaultSpeciesSet,
+                                neat.DefaultStagnation,
+                                config_path)
+    run(config)
