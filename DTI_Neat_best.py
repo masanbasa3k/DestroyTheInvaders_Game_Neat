@@ -267,7 +267,7 @@ if __name__ == "__main__":
                          config_path)
 
 
-    with open("best.pickle", "rb") as file:
+    with open("best_gen.pickle", "rb") as file:
         winner = pickle.load(file)
     winner_net = neat.nn.FeedForwardNetwork.create(winner,config)
     main(winner_net)
