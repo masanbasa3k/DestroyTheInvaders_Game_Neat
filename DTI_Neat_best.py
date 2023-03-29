@@ -1,3 +1,7 @@
+# Explanation: I trained the ai and saved the best gen, this code is running the best gen so there is only one ship playing the game
+# there is no ai learn something its just playing game
+# But this gen is not very good, It's need to more learning !!!
+
 import pygame
 import neat
 import os
@@ -11,7 +15,7 @@ lost_font = pygame.font.SysFont("comicsans", 60)
 WIDTH, HEIGHT = 750, 850
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Light in the Space")
-file_dir = '/Users/beyazituysal/Documents/PythonProjects/PygameGames/TestAiGame/imgs/invader_img'
+file_dir = 'Your local images file'
 
 def loadImage(spr):
     return pygame.image.load(os.path.join(f"{file_dir}/{spr}"))
@@ -256,7 +260,7 @@ def main(net):
 
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config-feedforward.txt')
+    config_path = os.path.join(local_dir, 'config-dti.txt')
 
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
