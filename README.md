@@ -1,5 +1,18 @@
 # DestroyTheInvaders_Game_Neat
- Destroy the Invaders game with python pygame and using Neat module and AI plays the game
+ -Destroy the Invaders game with python pygame and using Neat module and AI plays the game-
+
+
+If you want to play game, Destroy_The_Invaders_Game.py file is game. you can downloads images and run the game.
+
+Other files explanitaion:
+
+Destroy_The_Invaders_Game_Neat.py this file has neat module ,ai learn the game with everything. you can run directly
+
+DTI_Neat_for_live.py -> ai learns to just live
+
+DTI_Neat_fire_and_escape.py -> code take checkpoint from live code and learn live and killing enemies
+
+DTI_Neat_best.py -> this code take the best_gen.pickle and run it, its same with main game but you can just watch best gen what can do
 
 Game Photos
 
