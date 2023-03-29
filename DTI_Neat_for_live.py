@@ -1,3 +1,5 @@
+# Explanation: gens learn to live and save the best gen
+
 import pygame
 import neat
 import os
@@ -12,7 +14,7 @@ lost_font = pygame.font.SysFont("comicsans", 60)
 WIDTH, HEIGHT = 750, 850
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Light in the Space")
-file_dir = '/Users/beyazituysal/Documents/PythonProjects/PygameGames/TestAiGame/imgs/invader_img'
+file_dir = 'Your local images file'
 
 def loadImage(spr):
     return pygame.image.load(os.path.join(f"{file_dir}/{spr}"))
@@ -259,10 +261,6 @@ def main(genomes, config):
             elif decision1 == 4:
                 player.y += player_vel
 
-            # if player.f == 1:
-            #     ge[x].fitness += 5
-            #     player.f = 0
-
             # dont move out the screen
             if player.x < 0 or player.x > WIDTH-player.get_width() or player.y < 0 or player.y > HEIGHT-player.get_height() :
                 ge[x].fitness -= 5
@@ -272,16 +270,11 @@ def main(genomes, config):
 
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
-            # enemy.move_laser(laser_vel, player)
 
-            # if random.randrange(0, 2*60) == 1:
-            #     enemy.shoot()
             for x, player in enumerate(players):
                 if collide(enemy, player):
                     player.health -= 1000
 
-                    # if enemy in enemies:
-                    #     enemies.remove(enemy) 
             if enemy.y + enemy.get_height() > HEIGHT:
                 if enemy in enemies:
                     enemies.remove(enemy)
@@ -291,18 +284,20 @@ def main(genomes, config):
             run = False
 
 def run(config):
-    # p = neat.Checkpointer.restore_checkpoint("neat-checkpoint")
-    p = neat.Population(config)
+    # I have checkpoint if you dont have or dont download my checkpoint just use down belowe code and delete checkpoint code
+    p = neat.Checkpointer.restore_checkpoint("neat-checkpoint-140")
+    # this is code
+    # p = neat.Population(config)
     
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    p.add_reporter(neat.Checkpointer(50))
+    p.add_reporter(neat.Checkpointer(10))
 
-    winner = p.run(main,50)
+    winner = p.run(main,10)
 
     #save the best winner
-    with open("DTI_best_gen.pickle","wb") as file:
+    with open("best.pickle","wb") as file:
         pickle.dump(winner, file)
 
     # show final stats
