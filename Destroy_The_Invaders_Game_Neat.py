@@ -1,3 +1,6 @@
+# Explanation: This code just teach everything to ia (live and kill the enemy)
+# its from start zero and save the best gen, and take checkpoint for each 50 gen
+
 import pygame
 import neat
 import os
@@ -12,7 +15,7 @@ lost_font = pygame.font.SysFont("comicsans", 60)
 WIDTH, HEIGHT = 750, 850
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Light in the Space")
-file_dir = '/Users/beyazituysal/Documents/PythonProjects/PygameGames/TestAiGame/imgs/invader_img'
+file_dir = 'Your local images file'
 
 def loadImage(spr):
     return pygame.image.load(os.path.join(f"{file_dir}/{spr}"))
@@ -86,19 +89,10 @@ class Ship:
 
     def shoot(self, count):        
         if self.cool_down_counter == 0:
-            for i in range(count):
-                if count == 1:
-                    laser = Laser(self.x+35, self.y, self.laser_img)
-                    self.lasers.append(laser)
-                    self.cool_down_counter = 1
-                elif count == 2:
-                    laser = Laser(self.x+(i*70), self.y, self.laser_img)
-                    self.lasers.append(laser)
-                    self.cool_down_counter = 1
-                elif count == 3:
-                    laser = Laser(self.x+(i*35), self.y, self.laser_img)
-                    self.lasers.append(laser)
-                    self.cool_down_counter = 1
+            if count == 1:
+                laser = Laser(self.x+32, self.y, self.laser_img)
+                self.lasers.append(laser)
+                self.cool_down_counter = 1
 
     def get_width(self):
         return self.ship_img.get_width()
@@ -124,7 +118,7 @@ class Player(Ship):
             else:
                 for obj in objs:
                     if laser.collision(obj):
-                        # objs.remove(obj)
+                        objs.remove(obj)
                         self.f = 1
                         if laser in self.lasers:
                             self.lasers.remove(laser)
@@ -227,8 +221,9 @@ def main(genomes, config):
             
         if len(enemies) == 0:
             level += 1
+            # gain fitness for each level
             for g in ge:
-                g.fitness += 5
+                g.fitness += 1
             wave_length += 1
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(0, WIDTH-64), random.randrange(-1000, -100), random.choice(["one", "two", "three"]))
@@ -258,9 +253,10 @@ def main(genomes, config):
             elif decision1 == 4:
                 player.y += player_vel
 
-            # if player.f == 1:
-            #     ge[x].fitness += 5
-            #     player.f = 0
+            if player.f == 1:
+                # gain fitness for each kill enemy
+                ge[x].fitness += 5
+                player.f = 0
 
             # dont move out the screen
             if player.x < 0 or player.x > WIDTH-player.get_width() or player.y < 0 or player.y > HEIGHT-player.get_height() :
@@ -271,16 +267,12 @@ def main(genomes, config):
 
         for enemy in enemies[:]:
             enemy.move(enemy_vel)
-            # enemy.move_laser(laser_vel, player)
-
-            # if random.randrange(0, 2*60) == 1:
-            #     enemy.shoot()
             for x, player in enumerate(players):
                 if collide(enemy, player):
                     player.health -= 1000
 
-                    # if enemy in enemies:
-                    #     enemies.remove(enemy) 
+                    if enemy in enemies:
+                        enemies.remove(enemy) 
             if enemy.y + enemy.get_height() > HEIGHT:
                 if enemy in enemies:
                     enemies.remove(enemy)
@@ -290,18 +282,18 @@ def main(genomes, config):
             run = False
 
 def run(config):
-    #p = neat.Checkpointer.restore_checkpoint("neat-checkpoint-{number}")
+
     p = neat.Population(config)
     
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    p.add_reporter(neat.Checkpointer(50))#save the chekpoint
+    p.add_reporter(neat.Checkpointer(50))
 
     winner = p.run(main,50)
 
     #save the best winner
-    with open("best.pickle","wb") as file:
+    with open("best_gen.pickle","wb") as file:
         pickle.dump(winner, file)
 
     # show final stats
@@ -309,10 +301,11 @@ def run(config):
 
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, "config-feedforward.txt")
+    config_path = os.path.join(local_dir, "config-dti.txt")
     config = neat.config.Config(neat.DefaultGenome,
                                 neat.DefaultReproduction,
                                 neat.DefaultSpeciesSet,
                                 neat.DefaultStagnation,
                                 config_path)
+
     run(config)
