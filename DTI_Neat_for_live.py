@@ -297,7 +297,7 @@ def run(config):
     winner = p.run(main,10)
 
     #save the best winner
-    with open("best.pickle","wb") as file:
+    with open("best_dodge.pickle","wb") as file:
         pickle.dump(winner, file)
 
     # show final stats
